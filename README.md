@@ -133,16 +133,23 @@ $Rx_{lk}=0.000000\ ;\ Ry_{lk}=0.000000\ ;\ Rz_{lk}=0.000000\ ;$
     
 This coordinates are relative to the direct parent. To express the upper left leg coordinates in the global coordinate system, you have to compute translation and rotation matrices.  
 
-$\ce{^{R_G}_{}P_{ull}} = \begin{bmatrix}
+<!-- $\ce{^{R_G}_{}P_{ull}} = \begin{bmatrix}
 x_{ull} \\
 y_{ull} \\
 z_{ull} \\
 1
-\end{bmatrix} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R} * \ce{^{R_root}_{}P_{ull}}$
+\end{bmatrix} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R} * \ce{^{R_root}_{}P_{ull}}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\lk1SvMaPsD.svg">
   
-where $\ce{^{R_G}_{R_{root}}T} = \begin{bmatrix}1 & 0 & 0 & Tx_{root} \\0 & 1 & 0 & Ty_{root} \\0 & 0 & 1 & Tz_{root} \\0 & 0 & 0 & 1\end{bmatrix}$ and  
+where <!-- $
+\ce{^{R_G}_{R_{root}}T} = 
+\begin{bmatrix}
+1 & 0 & 0 & Tx_{root} \\
+0 & 1 & 0 & Ty_{root} \\
+0 & 0 & 1 & Tz_{root} \\
+0 & 0 & 0 & 1
+\end{bmatrix}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\BqQLeEUkIX.svg"> and  
   
-$\ce{^{R_G}_{R_{root}}R} =  \begin{bmatrix}cos(Ry_{root}) & 0 & sin(Ry_{root}) & 0 \\0 & 1 & 0 & 0 \\-sin(Ry_{root}) & 0 & cos(Ry_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}1 & 0 & 0 & 0 \\0 & cos(Rx_{root}) & -sin(Rx_{root}) & 0 \\0 & sin(Rx_{root}) & cos(Rx_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}cos(Rz_{root}) & -sin(Rz_{root}) & 0 & 0 \\sin(Rz_{root}) & cos(Rz_{root}) & 0 & 0 \\0 & 0 & 1 & 0 \\0 & 0 & 0 & 1\end{bmatrix}$
+<!-- $\ce{^{R_G}_{R_{root}}R} =  \begin{bmatrix}cos(Ry_{root}) & 0 & sin(Ry_{root}) & 0 \\0 & 1 & 0 & 0 \\-sin(Ry_{root}) & 0 & cos(Ry_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}1 & 0 & 0 & 0 \\0 & cos(Rx_{root}) & -sin(Rx_{root}) & 0 \\0 & sin(Rx_{root}) & cos(Rx_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}cos(Rz_{root}) & -sin(Rz_{root}) & 0 & 0 \\sin(Rz_{root}) & cos(Rz_{root}) & 0 & 0 \\0 & 0 & 1 & 0 \\0 & 0 & 0 & 1\end{bmatrix}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\OG1UPzGvCH.svg">
 
 Once this is done, the result is the coordinates of the upper left leg in the global coordinate system.  
 Let's continue with the left knee, you can note $\ce{^{R_G}_{R_{root}}H} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R}$.  
