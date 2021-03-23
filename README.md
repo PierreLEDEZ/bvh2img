@@ -11,7 +11,8 @@
       - [Example](#example)
 
 ## General info
-
+:warning: **This file contains mathematical formulas in images that cannot be read with the dark theme.**  
+  
 This is a python script to convert BVH files from motion capture equipment ("Perception Neuron") to images with differents encoding processes.
 The converted images are then used to train a CNN. 
 
