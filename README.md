@@ -67,7 +67,7 @@ clip_limit=10
 ### RGB
 
 The encoding process that I called "RGB" is simply converting the rotation and translation coordinates present in the BVH files into pixel values.  
-For a given motion sequence $S$ of $N$ frames, noted $S=\{F1, F2, ..., Fn\}$, and a skeleton containing $M$ joints, each frame will contain $3*M$ translation coordinates and $3*M$ rotation coordinates.  
+For a given motion sequence $S$ of $N$ frames, noted <!-- $S=\{F1, F2, ..., Fn\}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\IRxiekngcy.svg">, and a skeleton containing $M$ joints, each frame will contain <!-- $3*M$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\bAiUSxjBQX.svg"> translation coordinates and <!-- $3*M$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\44DiUgEmuJ.svg"> rotation coordinates.  
 With the "Axis Neuron" software, the data are ordered as follows:
 "Tx1 Ty1 Tz1 Ry1 Rx1 Rz1 Tx2 ... RyM RxM RzM"
 
@@ -75,13 +75,13 @@ With the "Axis Neuron" software, the data are ordered as follows:
 <!-- $R = 255 * \frac{(Rx - min(X_{rot}))}{(max(X_{rot})-min(X_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\sSlZq0DByx.svg">  
 <!-- $G = 255 * \frac{(Ry - min(Y_{rot}))}{(max(Y_{rot})-min(Y_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\zybr85aPMF.svg">  
 <!-- $B = 255 * \frac{(Rz - min(Z_{rot}))}{(max(Z_{rot})-min(Z_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\2X7GXFypA1.svg">    
-where $X_{rot}$, $Y_{rot}$ and $Z_{rot}$ represent respectively rotation coordinates around X, Y and Z axis of all frames.
+where <!-- $X_{rot}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\uuvdlwxc6J.svg">, <!-- $Y_{rot}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\KoKBHWg1o4.svg"> and <!-- $Z_{rot}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\X9OYxJmwEi.svg"> represent respectively rotation coordinates around X, Y and Z axis of all frames.
 
 * The translation coordinates are normalized with the same formula, except that the coordinates is multiplied by a scale factor  
 <!-- $R = 255 * \frac{(Tx*Scale - min(X_{tra}))}{(max(X_{tra})-min(X_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\WcIQ8vZ5Wa.svg">  
 <!-- $G = 255 * \frac{(Ty*Scale - min(Y_{tra}))}{(max(Y_{tra})-min(Y_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\zsTIx4UL7x.svg">  
 <!-- $B = 255 * \frac{(Tz*Scale - min(Z_{tra}))}{(max(Z_{tra})-min(Z_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\nbWe3sg8WI.svg">  
-where $X_{tra}$, $Y_{tra}$ and $Z_{tra}$ represents respectively translation coordinates along X, Y and Z axis of all frames.
+where <!-- $X_{tra}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\ge60q32t1b.svg">, <!-- $Y_{tra}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\LWVKpTWX5f.svg"> and <!-- $Z_{tra}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\BKm1yqXuAS.svg"> represents respectively translation coordinates along X, Y and Z axis of all frames.
 
 The resulting image is structured as follows: 
 A frame is represented by a column in the image (one pixel wide and the height is equal to the number of joints multiplied by two).  
@@ -98,13 +98,13 @@ This encoding process is similar to the one presented by Huy-Hieu Pham in his wo
 
 From the XYZ coordinates of joints, two elements has to be extracted: PF (Pose Feature) and MF (Motion Feature)  
 
-* PF : it's composed of two geometric features, the Joint-Joint Distance ($JJD$) and the Joint-Joint Orientation ($JJO$).  
-  * The $JJD$ feature is the euclidean distance between two joints in a frame. This is computed for each frame and for every joints in a frame (To avoid useless computation time, the distance from a joint (A) to another (B) is computed but the distance between B and A is ignored because it's the same)  
-  Once every distance is computed, they are normalized between $[0;255]$ and next, a colormap is applied with OpenCV to convert the scalar distance to a pixel with 3 values (R, G, and B) 
-  * The $JJO$ feature is the orientation vector between two joints in a given frame. As the $JJD$, it's computed for every joints in each frame and for two given joints, just one orientation is computed.  
-  * For a given frame $t$, $PF^t=[JJD^t ++ JJO^t]$ (here "++" represents concatenation between the two arrays). In term of image, $PF^t$ is a column, the upper half represents all the distances and the lower half all the orientations.
-* MF : it's composed of the same features than PF. Here the $JJD$ and $JJO$ are computed between every joints in the frame $t$ and every joints in the frame $t+1$.  
-  For two given frames $t-$ and $t+1$, <!-- $MF^{t->t+1}=[JJD^{t,t+1} ++ JJO^{t,t+1}]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\u5rgrwtgnl.svg">. In term of image, $MF^{t->t+1}$ is a column where the upper half represents all the distances and the lower half all the orientations.  
+* PF : it's composed of two geometric features, the Joint-Joint Distance (<!-- $JJD$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\1QYuNMvBTX.svg">) and the Joint-Joint Orientation (<!-- $JJO$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\oiTqg289Pv.svg">).  
+  * The <!-- $JJD$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\HLIIIs2BCv.svg"> feature is the euclidean distance between two joints in a frame. This is computed for each frame and for every joints in a frame (To avoid useless computation time, the distance from a joint (A) to another (B) is computed but the distance between B and A is ignored because it's the same)  
+  Once every distance is computed, they are normalized between <!-- $[0;255]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\cABgCIsY8u.svg"> and next, a colormap is applied with OpenCV to convert the scalar distance to a pixel with 3 values (R, G, and B) 
+  * The <!-- $JJO$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\5i9v45zOdC.svg"> feature is the orientation vector between two joints in a given frame. As the $JJD$, it's computed for every joints in each frame and for two given joints, just one orientation is computed.  
+  * For a given frame <!-- $t$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\1g820ZjlbF.svg">, <!-- $PF^t=[JJD^t ++ JJO^t]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\4kKYXcpb0s.svg"> (here "++" represents concatenation between the two arrays). In term of image, <!-- $PF^t$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\YxzxG3WkOj.svg"> is a column, the upper half represents all the distances and the lower half all the orientations.
+* MF : it's composed of the same features than PF. Here the <!-- $JJD$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\CjCMNwJtyJ.svg"> and <!-- $JJO$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\C4GGdRQox0.svg"> are computed between every joints in the frame <!-- $t$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\wTcsGCU09t.svg"> and every joints in the frame <!-- $t+1$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\fG1Cm6Uoz4.svg">.  
+  For two given frames <!-- $t$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\l0rK61rjAr.svg"> and <!-- $t+1$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\ZtMHglkJLx.svg">, <!-- $MF^{t->t+1}=[JJD^{t,t+1} ++ JJO^{t,t+1}]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\u5rgrwtgnl.svg">. In term of image, <!-- $MF^{t->t+1}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\MrkoofV7aC.svg"> is a column where the upper half represents all the distances and the lower half all the orientations.  
   
 The image is composed from PF and MF as follows:
 <!-- $SPMF=[PF^1 ++ MF^{1->2} ++ PF^2 ++ ... ++ MF^{N-1->N} ++ PF^N]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\F5u1IL95Bb.svg"> where N is the number of frames.  
@@ -153,7 +153,7 @@ where <!-- $
 <!-- $\ce{^{R_G}_{R_{root}}R} =  \begin{bmatrix}cos(Ry_{root}) & 0 & sin(Ry_{root}) & 0 \\0 & 1 & 0 & 0 \\-sin(Ry_{root}) & 0 & cos(Ry_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}1 & 0 & 0 & 0 \\0 & cos(Rx_{root}) & -sin(Rx_{root}) & 0 \\0 & sin(Rx_{root}) & cos(Rx_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}cos(Rz_{root}) & -sin(Rz_{root}) & 0 & 0 \\sin(Rz_{root}) & cos(Rz_{root}) & 0 & 0 \\0 & 0 & 1 & 0 \\0 & 0 & 0 & 1\end{bmatrix}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\OG1UPzGvCH.svg">
 
 Once this is done, the result is the coordinates of the upper left leg in the global coordinate system.  
-Let's continue with the left knee, you can note $\ce{^{R_G}_{R_{root}}H} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R}$.  
+Let's continue with the left knee, you can note <!-- $\ce{^{R_G}_{R_{root}}H} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\bEJVBXsI0z.svg">.  
 The global coordinates of the left knee are:  
   
 <!-- $\ce{^{R_G}_{}P_{lk}} = \begin{bmatrix}
