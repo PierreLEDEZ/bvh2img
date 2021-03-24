@@ -149,6 +149,8 @@ where <!-- $
 0 & 0 & 1 & Tz_{root} \\
 0 & 0 & 0 & 1
 \end{bmatrix}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\BqQLeEUkIX.svg">  
+  
+  
 and   
 <!-- $\ce{^{R_G}_{R_{root}}R} =  \begin{bmatrix}cos(Ry_{root}) & 0 & sin(Ry_{root}) & 0 \\0 & 1 & 0 & 0 \\-sin(Ry_{root}) & 0 & cos(Ry_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}1 & 0 & 0 & 0 \\0 & cos(Rx_{root}) & -sin(Rx_{root}) & 0 \\0 & sin(Rx_{root}) & cos(Rx_{root}) & 0 \\0 & 0 & 0 & 1\end{bmatrix} * \begin{bmatrix}cos(Rz_{root}) & -sin(Rz_{root}) & 0 & 0 \\sin(Rz_{root}) & cos(Rz_{root}) & 0 & 0 \\0 & 0 & 1 & 0 \\0 & 0 & 0 & 1\end{bmatrix}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\OG1UPzGvCH.svg">
 
