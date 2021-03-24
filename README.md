@@ -72,15 +72,15 @@ With the "Axis Neuron" software, the data are ordered as follows:
 "Tx1 Ty1 Tz1 Ry1 Rx1 Rz1 Tx2 ... RyM RxM RzM"
 
 * The rotation coordinates are normalized between 0 and 255 with:  
-$R = 255 * \frac{(Rx - min(X_{rot}))}{(max(X_{rot})-min(X_{rot}))}$  
-$G = 255 * \frac{(Ry - min(Y_{rot}))}{(max(Y_{rot})-min(Y_{rot}))}$  
-$B = 255 * \frac{(Rz - min(Z_{rot}))}{(max(Z_{rot})-min(Z_{rot}))}$    
+<!-- $R = 255 * \frac{(Rx - min(X_{rot}))}{(max(X_{rot})-min(X_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\sSlZq0DByx.svg">  
+<!-- $G = 255 * \frac{(Ry - min(Y_{rot}))}{(max(Y_{rot})-min(Y_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\zybr85aPMF.svg">  
+<!-- $B = 255 * \frac{(Rz - min(Z_{rot}))}{(max(Z_{rot})-min(Z_{rot}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\2X7GXFypA1.svg">    
 where $X_{rot}$, $Y_{rot}$ and $Z_{rot}$ represent respectively rotation coordinates around X, Y and Z axis of all frames.
 
 * The translation coordinates are normalized with the same formula, except that the coordinates is multiplied by a scale factor  
-$R = 255 * \frac{(Tx*Scale - min(X_{tra}))}{(max(X_{tra})-min(X_{tra}))}$  
-$G = 255 * \frac{(Ty*Scale - min(Y_{tra}))}{(max(Y_{tra})-min(Y_{tra}))}$  
-$B = 255 * \frac{(Tz*Scale - min(Z_{tra}))}{(max(Z_{tra})-min(Z_{tra}))}$  
+<!-- $R = 255 * \frac{(Tx*Scale - min(X_{tra}))}{(max(X_{tra})-min(X_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\WcIQ8vZ5Wa.svg">  
+<!-- $G = 255 * \frac{(Ty*Scale - min(Y_{tra}))}{(max(Y_{tra})-min(Y_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\zsTIx4UL7x.svg">  
+<!-- $B = 255 * \frac{(Tz*Scale - min(Z_{tra}))}{(max(Z_{tra})-min(Z_{tra}))}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\nbWe3sg8WI.svg">  
 where $X_{tra}$, $Y_{tra}$ and $Z_{tra}$ represents respectively translation coordinates along X, Y and Z axis of all frames.
 
 The resulting image is structured as follows: 
@@ -104,10 +104,10 @@ From the XYZ coordinates of joints, two elements has to be extracted: PF (Pose F
   * The $JJO$ feature is the orientation vector between two joints in a given frame. As the $JJD$, it's computed for every joints in each frame and for two given joints, just one orientation is computed.  
   * For a given frame $t$, $PF^t=[JJD^t ++ JJO^t]$ (here "++" represents concatenation between the two arrays). In term of image, $PF^t$ is a column, the upper half represents all the distances and the lower half all the orientations.
 * MF : it's composed of the same features than PF. Here the $JJD$ and $JJO$ are computed between every joints in the frame $t$ and every joints in the frame $t+1$.  
-  For two given frames $t-$ and $t+1$, $MF^{t->t+1}=[JJD^{t,t+1} ++ JJO^{t,t+1}]$. In term of image, $MF^{t->t+1}$ is a column where the upper half represents all the distances and the lower half all the orientations.  
+  For two given frames $t-$ and $t+1$, <!-- $MF^{t->t+1}=[JJD^{t,t+1} ++ JJO^{t,t+1}]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\u5rgrwtgnl.svg">. In term of image, $MF^{t->t+1}$ is a column where the upper half represents all the distances and the lower half all the orientations.  
   
 The image is composed from PF and MF as follows:
-$SPMF=[PF^1 ++ MF^{1->2} ++ PF^2 ++ ... ++ MF^{N-1->N} ++ PF^N]$ where N is the number of frames.  
+<!-- $SPMF=[PF^1 ++ MF^{1->2} ++ PF^2 ++ ... ++ MF^{N-1->N} ++ PF^N]$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\F5u1IL95Bb.svg"> where N is the number of frames.  
 
 Since the joint data received by the "Perception Neuron" mocap equipment are not all expressed in the same coordinate system, it is necessary to move them in the global coordinate system, the root one.  
 
@@ -121,16 +121,16 @@ The global coordinate system is the one in which the root node is expressed. To 
 #### Example
   
 For this example, let's say the **root** coordinates are :  
-$Tx_{root}=0.000000\ ;\ Ty_{root}=93.019646\ ;\ Tz_{root}=0.000000\ ;$  
-$Rx_{root}=0.000000\ ;\ Ry_{root}=101.470901\ ;\ Rz_{root}=0.000000\ ;$    
+<!-- $Tx_{root}=0.000000\ ;\ Ty_{root}=93.019646\ ;\ Tz_{root}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\6CRnww74gN.svg">  
+<!-- $Rx_{root}=0.000000\ ;\ Ry_{root}=101.470901\ ;\ Rz_{root}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\lzzdw5STVw.svg">    
   
 The next ones in the bvh file correspond to the **upper left leg** and they are :  
-$Tx_{ull}=-9.250000\ ;\ Ty_{ull}=-1.589645\ ;\ Tz_{ull}=0.000000\ ;$  
-$Rx_{ull}=0.000000\ ;\ Ry_{ull}=0.000000\ ;\ Rz_{ull}=0.000000\ ;$  
+<!-- $Tx_{ull}=-9.250000\ ;\ Ty_{ull}=-1.589645\ ;\ Tz_{ull}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\t90ImEeasI.svg">  
+<!-- $Rx_{ull}=0.000000\ ;\ Ry_{ull}=0.000000\ ;\ Rz_{ull}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\iVXStkd90M.svg">  
   
 The next ones in the bvh file correspond to the **left knee** and they are :  
-$Tx_{lk}=0.000000\ ;\ Ty_{lk}=-41.870003\ ;\ Tz_{lk}=0.000000\ ;$  
-$Rx_{lk}=0.000000\ ;\ Ry_{lk}=0.000000\ ;\ Rz_{lk}=0.000000\ ;$
+<!-- $Tx_{lk}=0.000000\ ;\ Ty_{lk}=-41.870003\ ;\ Tz_{lk}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\LIJcj8M2cC.svg">  
+<!-- $Rx_{lk}=0.000000\ ;\ Ry_{lk}=0.000000\ ;\ Rz_{lk}=0.000000\ ;$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\p1XBqrbcrt.svg">
     
 This coordinates are relative to the direct parent. To express the upper left leg coordinates in the global coordinate system, you have to compute translation and rotation matrices.  
 
@@ -156,10 +156,10 @@ Once this is done, the result is the coordinates of the upper left leg in the gl
 Let's continue with the left knee, you can note $\ce{^{R_G}_{R_{root}}H} = \ce{^{R_G}_{R_{root}}T} * \ce{^{R_G}_{R_{root}}R}$.  
 The global coordinates of the left knee are:  
   
-$\ce{^{R_G}_{}P_{lk}} = \begin{bmatrix}
+<!-- $\ce{^{R_G}_{}P_{lk}} = \begin{bmatrix}
 x_{lk} \\
 y_{lk} \\
 z_{lk} \\
 1
-\end{bmatrix} = \ce{^{R_G}_{R_{root}}H} * \ce{^{R_root}_{R_{ull}}H} * \ce{^{R_ull}_{}P_{lk}}$ with $\ce{^{R_root}_{R_{ull}}H}=\ce{^{R_root}_{R_{ull}}T} * \ce{^{R_root}_{R_{ull}}R}$, as calculated above.
+\end{bmatrix} = \ce{^{R_G}_{R_{root}}H} * \ce{^{R_root}_{R_{ull}}H} * \ce{^{R_ull}_{}P_{lk}}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\8DnUBchaEg.svg"> with <!-- $\ce{^{R_root}_{R_{ull}}H}=\ce{^{R_root}_{R_{ull}}T} * \ce{^{R_root}_{R_{ull}}R}$ --> <img style="transform: translateY(0.1em); background: white;" src=".\svg\xoCMBZ6Erh.svg">, as calculated above.
 
