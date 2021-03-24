@@ -38,7 +38,7 @@ $ python main.py [--test] [--config path_to_config_file] [--details some text he
     -h, --help                                                   Show this help message and exit
     -t, --test                                                   Test the script on 10 files
     -c path_to_config_file, --config path_to_config_file         Use a config file
-    -d text for the filename, --details text for the filename    Add additionnal informations to filename
+    -d text for the filename, --details text for the filename    Add additionnal infos to filename
 
 ```
 
