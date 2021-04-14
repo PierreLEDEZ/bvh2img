@@ -1,3 +1,9 @@
+import matplotlib
+matplotlib.use("Qt5Agg")
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+
 import argparse
 import math
 import os
@@ -7,7 +13,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 
 import lib.bvh2geometric as bvh2geometric
 from src.bvh import bvh_parser
@@ -114,6 +119,8 @@ def getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index):
 
     coords_frames = np.zeros((width, height, 3), dtype=np.float32)
 
+    initial_Yrotation = 0
+
     for frame_index, frame in enumerate(frames):
         stack_joints = []
         stack_M = []
@@ -134,6 +141,18 @@ def getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index):
                 # get current joint coordinates from bvh
                 bvh_content = [frame[joint_placed + i] for i in range(6)]
 
+                if frame_index == 0:
+                    initial_Yrotation = bvh_content[3]
+                    if initial_Yrotation < 0:
+                        initial_Yrotation = 360 - np.abs(initial_Yrotation)
+                    bvh_content[3] = 0.0
+
+                else:
+                    tmp = bvh_content[3]
+                    if tmp < 0:
+                        tmp = 360 - np.abs(tmp)
+                    Yrotation = tmp - initial_Yrotation
+                    bvh_content[3] = Yrotation
                 # save bvh informations in the stack_joints array
                 stack_joints.append(bvh_content)
 
@@ -176,6 +195,96 @@ def getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index):
             pixel_placed += 1
 
     return coords_frames
+
+def bvh2LiuImg(frames, joints, ignored_joints, ignored_joints_index):
+    # First, compute global coordinates from bvh informations
+    coords_frames = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
+
+    F = len(coords_frames)
+    N = len(coords_frames[0])
+
+    space_2D = np.array(
+        [
+            [0, 1],
+            [0, 2],
+            [0, 3],
+            [0, 4],
+            [1, 2],
+            [1, 3],
+            [1, 4],
+            [2, 3],
+            [2, 4],
+            [3, 4]
+        ],
+        dtype=np.uint8
+    )
+
+    space_3D = np.array(
+        [
+            [2, 3, 4],
+            [1, 3, 4],
+            [1, 2, 4],
+            [1, 2, 3],
+            [0, 3, 4],
+            [0, 2, 4],
+            [0, 2, 3],
+            [0, 1, 4],
+            [0, 1, 3],
+            [0, 1, 2],
+        ],
+        dtype=np.uint8
+    )
+
+    energies = np.zeros((N), dtype=np.float32)
+    for f in range(F-1):
+        current_frame = coords_frames[f]
+        next_frame = coords_frames[f+1]
+        for n in range(N):
+            energy = np.linalg.norm(next_frame[n] - current_frame[n])
+            energies[n] += energy
+
+    energies = (energies - np.amin(energies))/(np.amax(energies) - np.amin(energies))
+
+    rho = .8
+
+    weights = rho*energies + (1 - rho)
+
+    images = [[[], [] ,[]]]
+
+    for f in range(F):
+        for n in range(N):
+            coords_5D = np.concatenate((coords_frames[f][n], np.array([f, n])))
+            for c in range(10):
+                current_2D = space_2D[1]
+                current_3D = space_3D[1]
+                j = coords_5D[current_2D[0]]
+                k = coords_5D[current_2D[1]]
+                r = coords_5D[current_3D[0]]
+                g = coords_5D[current_3D[1]]
+                b = coords_5D[current_3D[2]]
+                rgb = np.array([r, g, b])
+                rgb = (1 - weights[n])*np.array([255, 255, 255]) + weights[n]*rgb
+                images[0][0].append(j)
+                images[0][1].append(k)
+                images[0][2].append(rgb)
+
+    fig = Figure()
+    canvas = FigureCanvas(fig)
+    ax = fig.gca()
+    ax.axis("off")
+
+    y = images[0][0]
+    x = images[0][1]
+
+    rgb = np.array(images[0][2])
+    rgb = (rgb - np.amin(rgb))/(np.amax(rgb) - np.amin(rgb))
+    
+    ax.scatter(x, y, s=50, facecolors=rgb)
+    fig.canvas.draw()
+    X = np.array(canvas.renderer.buffer_rgba())
+    X = cv2.cvtColor(X, cv2.COLOR_RGB2BGR)
+
+    return X
 
 def bvh2GeometricFeaturesPham(frames, joints, ignored_joints, ignored_joints_index):
     """
@@ -473,7 +582,7 @@ def calculate_orientation(joint_from, joint_to):
         ]
     )
 
-def bvh2GeometricFeaturesRootAndHead(frames, joints, ignored_joints, ignored_joints_index):
+def bvh2GeometricFeaturesCustom(frames, joints, ignored_joints, ignored_joints_index, joints_we_want):
     """
         Convert BVH informations to RGB image after computing geometric features
 
@@ -487,7 +596,8 @@ def bvh2GeometricFeaturesRootAndHead(frames, joints, ignored_joints, ignored_joi
         :return: RGB image
         :rtype: numpy array
     """
-
+    # joints_we_want = [0, 13, 16, 17, 20] # root, shoulders, hands
+    # joints_we_want = [4, 7, 12, 16, 20] # head, feet, hands
     coords_frames = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
 
     # For each frame, compute all JJD (Joint-Joint Distance) and JJO (Joint-Joint Orientation) for Pose Features (PF) and Motion Features (MF)
@@ -497,168 +607,33 @@ def bvh2GeometricFeaturesRootAndHead(frames, joints, ignored_joints, ignored_joi
     O_original_motion = []
 
     for t in range(len(coords_frames)):
+        if t == 0:
+            plotFrame(coords_frames[t])
         frame_t = coords_frames[t]
         if t != len(coords_frames)-1:
             next_frame = coords_frames[t+1]
-            root_next_t = next_frame[0]
-            head_next_t = next_frame[12]
 
         JJD_pose = []
         JJD_motion = []
         JJO_pose = []
         JJO_motion = []
-        root_t = frame_t[0]
-        head_t = frame_t[12]
 
-        for joint in range(len(frame_t)):
-            if joint == 0: # ROOT
-                JJD_pose.append(calculate_euclidean_distance(head_t, root_t))
-                JJD_motion.append(calculate_euclidean_distance(head_t, root_next_t))
-                JJO_pose.append(calculate_orientation(head_t, root_t))
-                JJO_motion.append(calculate_orientation(head_t, root_next_t))
-                continue
-            
-            if joint == 12: # HEAD
-                JJD_pose.append(calculate_euclidean_distance(root_t, head_t))
-                JJD_motion.append(calculate_euclidean_distance(root_t, head_next_t))
-                JJO_pose.append(calculate_orientation(root_t, head_t))
-                JJO_motion.append(calculate_orientation(root_t, head_next_t))  
-                continue
+        references = [frame_t[j] for j in joints_we_want]
 
-            JJD_pose.append(calculate_euclidean_distance(root_t, frame_t[joint]))
-            JJD_pose.append(calculate_euclidean_distance(head_t, frame_t[joint]))
+        for joint_J in range(len(frame_t)):
+            for joint_K, ref in zip(joints_we_want, references):
+                if joint_J == joint_K:
+                    continue
 
-            if t != len(coords_frames)-1:
-                JJD_motion.append(calculate_euclidean_distance(root_t, next_frame[joint]))
-                JJD_motion.append(calculate_euclidean_distance(head_t, next_frame[joint]))
-
-            JJO_pose.append(calculate_orientation(root_t, frame_t[joint]))
-            JJO_pose.append(calculate_orientation(head_t, frame_t[joint]))
-
-            if t != len(coords_frames)-1:
-                JJO_motion.append(calculate_orientation(root_t, next_frame[joint]))
-                JJO_motion.append(calculate_orientation(head_t, next_frame[joint]))
-
-        D_original_pose.append(JJD_pose)
-        O_original_pose.append(JJO_pose)
-
-        if t != len(coords_frames)-1: 
-            D_original_motion.append(JJD_motion)
-            O_original_motion.append(JJO_motion)
-    
-    D_original_pose = np.array(D_original_pose)
-    D_original_motion = np.array(D_original_motion)
-    
-    # Normalize D_original_pose and D_original_motion between [0; 255] and apply JET color map on them to obtain two images with 3 channels (R, G, B)
-    D_min_pose = 0
-    D_min_motion = 0
-    
-    D_max_pose = np.amax(D_original_pose)
-    D_max_motion = np.amax(D_original_motion)
-
-    D_norm_pose = 255 * ((D_original_pose - D_min_pose) / (D_max_pose - D_min_pose))
-    D_norm_pose = np.array(D_norm_pose, dtype=np.uint8)
-    
-    D_norm_motion = 255 * ((D_original_motion - D_min_motion) / (D_max_motion - D_min_motion))
-    D_norm_motion = np.array(D_norm_motion, dtype=np.uint8)
-
-    JJD_RGB_pose = cv2.applyColorMap(D_norm_pose, cv2.COLORMAP_JET)
-    JJD_RGB_motion = cv2.applyColorMap(D_norm_motion, cv2.COLORMAP_JET)
-
-    O_original_pose = np.array(O_original_pose)
-    O_original_motion = np.array(O_original_motion)
-
-    # Normalize between [0; 255] and consider (x, y, z) as (R, G, B)
-    c_max_pose = np.amax(O_original_pose)
-    c_max_motion = np.amax(O_original_motion)
-
-    c_min_pose = np.amin(O_original_pose)
-    c_min_motion = np.amin(O_original_motion)
-    
-    JJO_RGB_pose = np.array(np.floor(255 * ((O_original_pose - c_min_pose) / (c_max_pose - c_min_pose))), dtype=np.uint8)
-    JJO_RGB_motion = np.array(np.floor(255 * ((O_original_motion - c_min_motion) / (c_max_motion - c_min_motion))), dtype=np.uint8)
-
-    PF = np.zeros((len(coords_frames), 80,  3), dtype=np.uint8)
-    MF = np.zeros((len(coords_frames)-1, 80, 3), dtype=np.uint8)
-
-    for nb_frame in range(len(coords_frames)):
-        temp_pf = np.concatenate([JJD_RGB_pose[nb_frame], JJO_RGB_pose[nb_frame]])
-        # temp_pf = JJD_RGB_pose[nb_frame]
-        PF[nb_frame] = temp_pf
-        if nb_frame < len(coords_frames)-1:
-            temp_mf = np.concatenate([JJD_RGB_motion[nb_frame], JJO_RGB_motion[nb_frame]])
-            # temp_mf = JJD_RGB_motion[nb_frame]
-            MF[nb_frame] = temp_mf
-
-    PF = np.array(PF)
-    MF = np.array(MF)
-    SPMF = np.zeros((80, 2*len(coords_frames)-1, 3), dtype=np.uint8)
-
-    frame_index = 0
-    for pf, mf in zip(PF, MF):
-        SPMF[:, frame_index] = pf
-        frame_index += 1
-        SPMF[:, frame_index] = mf
-        frame_index += 1
-    
-    # Add the last element of PF to SPMF because the zip function keeps only the elements in common between the two tables. 
-    # The PF table has one element more than MF.
-    SPMF[:, frame_index] = PF[-1]
-
-    return SPMF
-
-
-def bvh2GeometricFeaturesCustom(frames, joints, ignored_joints, ignored_joints_index):
-    """
-        Convert BVH informations to RGB image after computing geometric features
-
-        :param bvhParser: parser used to parse the given bvh
-        :type bvhParser: BVHParser Class
-        :param joints: List of body joints
-        :type joints: array of Joint Object
-        :param ignored_joints: List of joints we want to ignore
-        :type ignored_joints: array of string
-
-        :return: RGB image
-        :rtype: numpy array
-    """
-    joints_we_want = [0,13,17]
-    coords_frames = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
-
-    # For each frame, compute all JJD (Joint-Joint Distance) and JJO (Joint-Joint Orientation) for Pose Features (PF) and Motion Features (MF)
-    D_original_pose = []
-    O_original_pose = []
-    D_original_motion = []
-    O_original_motion = []
-
-    for t in range(len(coords_frames)):
-        frame_t = coords_frames[t]
-        if t != len(coords_frames)-1:
-            next_frame = coords_frames[t+1]
-            root_next_t = next_frame[0]
-            R_shoulder_next_t = next_frame[13]
-            L_shoulder_next_t = next_frame[17]
-
-        JJD_pose = []
-        JJD_motion = []
-        JJO_pose = []
-        JJO_motion = []
-        references = []
-
-        for j in joints_we_want:
-            references.append(frame_t[j])
-
-        for joint in range(len(frame_t)):
-            for ref in references:
-                JJD_pose.append(calculate_euclidean_distance(ref, frame_t[joint]))
+                JJD_pose.append(calculate_euclidean_distance(ref, frame_t[joint_J]))
                 
                 if t != len(coords_frames)-1:
-                    JJD_motion.append(calculate_euclidean_distance(ref, next_frame[joint]))
+                    JJD_motion.append(calculate_euclidean_distance(ref, next_frame[joint_J]))
                 
-                JJO_pose.append(calculate_orientation(ref, frame_t[joint]))
+                JJO_pose.append(calculate_orientation(ref, frame_t[joint_J]))
 
                 if t != len(coords_frames)-1:
-                    JJO_motion.append(calculate_orientation(ref, next_frame[joint]))
+                    JJO_motion.append(calculate_orientation(ref, next_frame[joint_J]))
 
         D_original_pose.append(JJD_pose)
         O_original_pose.append(JJO_pose)
@@ -669,7 +644,7 @@ def bvh2GeometricFeaturesCustom(frames, joints, ignored_joints, ignored_joints_i
     
     D_original_pose = np.array(D_original_pose)
     D_original_motion = np.array(D_original_motion)
-    
+
     # Normalize D_original_pose and D_original_motion between [0; 255] and apply JET color map on them to obtain two images with 3 channels (R, G, B)
     D_min_pose = 0
     D_min_motion = 0
@@ -699,183 +674,19 @@ def bvh2GeometricFeaturesCustom(frames, joints, ignored_joints, ignored_joints_i
     JJO_RGB_pose = np.array(np.floor(255 * ((O_original_pose - c_min_pose) / (c_max_pose - c_min_pose))), dtype=np.uint8)
     JJO_RGB_motion = np.array(np.floor(255 * ((O_original_motion - c_min_motion) / (c_max_motion - c_min_motion))), dtype=np.uint8)
 
-    PF = np.zeros((len(coords_frames), 120,  3), dtype=np.uint8)
-    MF = np.zeros((len(coords_frames)-1, 120, 3), dtype=np.uint8)
+    PF = np.zeros((len(coords_frames), 200,  3), dtype=np.uint8)
+    MF = np.zeros((len(coords_frames)-1, 200, 3), dtype=np.uint8)
 
     for nb_frame in range(len(coords_frames)):
         temp_pf = np.concatenate([JJD_RGB_pose[nb_frame], JJO_RGB_pose[nb_frame]])
-        # temp_pf = JJD_RGB_pose[nb_frame]
         PF[nb_frame] = temp_pf
         if nb_frame < len(coords_frames)-1:
             temp_mf = np.concatenate([JJD_RGB_motion[nb_frame], JJO_RGB_motion[nb_frame]])
-            # temp_mf = JJD_RGB_motion[nb_frame]
             MF[nb_frame] = temp_mf
 
     PF = np.array(PF)
     MF = np.array(MF)
-    SPMF = np.zeros((120, 2*len(coords_frames)-1, 3), dtype=np.uint8)
-
-    frame_index = 0
-    for pf, mf in zip(PF, MF):
-        SPMF[:, frame_index] = pf
-        frame_index += 1
-        SPMF[:, frame_index] = mf
-        frame_index += 1
-    
-    # Add the last element of PF to SPMF because the zip function keeps only the elements in common between the two tables. 
-    # The PF table has one element more than MF.
-    SPMF[:, frame_index] = PF[-1]
-
-    return SPMF
-
-def bvh2GeometricFeaturesRootAndShoulders(frames, joints, ignored_joints, ignored_joints_index):
-    """
-        Convert BVH informations to RGB image after computing geometric features
-
-        :param bvhParser: parser used to parse the given bvh
-        :type bvhParser: BVHParser Class
-        :param joints: List of body joints
-        :type joints: array of Joint Object
-        :param ignored_joints: List of joints we want to ignore
-        :type ignored_joints: array of string
-
-        :return: RGB image
-        :rtype: numpy array
-    """
-
-    coords_frames = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
-
-    # For each frame, compute all JJD (Joint-Joint Distance) and JJO (Joint-Joint Orientation) for Pose Features (PF) and Motion Features (MF)
-    D_original_pose = []
-    O_original_pose = []
-    D_original_motion = []
-    O_original_motion = []
-
-    for t in range(len(coords_frames)):
-        frame_t = coords_frames[t]
-        if t != len(coords_frames)-1:
-            next_frame = coords_frames[t+1]
-            root_next_t = next_frame[0]
-            R_shoulder_next_t = next_frame[13]
-            L_shoulder_next_t = next_frame[17]
-
-        JJD_pose = []
-        JJD_motion = []
-        JJO_pose = []
-        JJO_motion = []
-        root_t = frame_t[0]
-        R_shoulder_t = frame_t[13]
-        L_shoulder_t = frame_t[17]
-
-        for joint in range(len(frame_t)):
-            if joint == 0: # ROOT
-                JJD_pose.append(calculate_euclidean_distance(R_shoulder_t, root_t))
-                JJD_motion.append(calculate_euclidean_distance(R_shoulder_t, root_next_t))
-                JJO_pose.append(calculate_orientation(R_shoulder_t, root_t))
-                JJO_motion.append(calculate_orientation(R_shoulder_t, root_next_t))
-
-                JJD_pose.append(calculate_euclidean_distance(L_shoulder_t, root_t))
-                JJD_motion.append(calculate_euclidean_distance(L_shoulder_t, root_next_t))
-                JJO_pose.append(calculate_orientation(L_shoulder_t, root_t))
-                JJO_motion.append(calculate_orientation(L_shoulder_t, root_next_t))
-                continue
-            
-            if joint == 13:
-                JJD_pose.append(calculate_euclidean_distance(root_t, R_shoulder_t))
-                JJD_motion.append(calculate_euclidean_distance(root_t, R_shoulder_next_t))
-                JJO_pose.append(calculate_orientation(root_t, R_shoulder_t))
-                JJO_motion.append(calculate_orientation(root_t, R_shoulder_next_t))
-                
-                JJD_pose.append(calculate_euclidean_distance(L_shoulder_t, R_shoulder_t))
-                JJD_motion.append(calculate_euclidean_distance(L_shoulder_t, R_shoulder_next_t))
-                JJO_pose.append(calculate_orientation(L_shoulder_t, R_shoulder_t))
-                JJO_motion.append(calculate_orientation(L_shoulder_t, R_shoulder_next_t))  
-                continue
-
-            if joint == 17:
-                JJD_pose.append(calculate_euclidean_distance(root_t, L_shoulder_t))
-                JJD_motion.append(calculate_euclidean_distance(root_t, L_shoulder_next_t))
-                JJO_pose.append(calculate_orientation(root_t, L_shoulder_t))
-                JJO_motion.append(calculate_orientation(root_t, L_shoulder_next_t))  
-                
-                JJD_pose.append(calculate_euclidean_distance(R_shoulder_t, L_shoulder_t))
-                JJD_motion.append(calculate_euclidean_distance(R_shoulder_t, L_shoulder_next_t))
-                JJO_pose.append(calculate_orientation(R_shoulder_t, L_shoulder_t))
-                JJO_motion.append(calculate_orientation(R_shoulder_t, L_shoulder_next_t))  
-                continue
-
-            JJD_pose.append(calculate_euclidean_distance(root_t, frame_t[joint]))
-            JJD_pose.append(calculate_euclidean_distance(R_shoulder_t, frame_t[joint]))
-            JJD_pose.append(calculate_euclidean_distance(L_shoulder_t, frame_t[joint]))
-
-            if t != len(coords_frames)-1:
-                JJD_motion.append(calculate_euclidean_distance(root_t, next_frame[joint]))
-                JJD_motion.append(calculate_euclidean_distance(R_shoulder_t, next_frame[joint]))
-                JJD_motion.append(calculate_euclidean_distance(L_shoulder_t, next_frame[joint]))
-
-            JJO_pose.append(calculate_orientation(root_t, frame_t[joint]))
-            JJO_pose.append(calculate_orientation(R_shoulder_t, frame_t[joint]))
-            JJO_pose.append(calculate_orientation(L_shoulder_t, frame_t[joint]))
-
-            if t != len(coords_frames)-1:
-                JJO_motion.append(calculate_orientation(root_t, next_frame[joint]))
-                JJO_motion.append(calculate_orientation(R_shoulder_t, next_frame[joint]))
-                JJO_motion.append(calculate_orientation(L_shoulder_t, next_frame[joint]))
-
-        D_original_pose.append(JJD_pose)
-        O_original_pose.append(JJO_pose)
-
-        if t != len(coords_frames)-1: 
-            D_original_motion.append(JJD_motion)
-            O_original_motion.append(JJO_motion)
-    
-    D_original_pose = np.array(D_original_pose)
-    D_original_motion = np.array(D_original_motion)
-    
-    # Normalize D_original_pose and D_original_motion between [0; 255] and apply JET color map on them to obtain two images with 3 channels (R, G, B)
-    D_min_pose = 0
-    D_min_motion = 0
-    
-    D_max_pose = np.amax(D_original_pose)
-    D_max_motion = np.amax(D_original_motion)
-
-    D_norm_pose = 255 * ((D_original_pose - D_min_pose) / (D_max_pose - D_min_pose))
-    D_norm_pose = np.array(D_norm_pose, dtype=np.uint8)
-    
-    D_norm_motion = 255 * ((D_original_motion - D_min_motion) / (D_max_motion - D_min_motion))
-    D_norm_motion = np.array(D_norm_motion, dtype=np.uint8)
-
-    JJD_RGB_pose = cv2.applyColorMap(D_norm_pose, cv2.COLORMAP_JET)
-    JJD_RGB_motion = cv2.applyColorMap(D_norm_motion, cv2.COLORMAP_JET)
-
-    O_original_pose = np.array(O_original_pose)
-    O_original_motion = np.array(O_original_motion)
-
-    # Normalize between [0; 255] and consider (x, y, z) as (R, G, B)
-    c_max_pose = np.amax(O_original_pose)
-    c_max_motion = np.amax(O_original_motion)
-
-    c_min_pose = np.amin(O_original_pose)
-    c_min_motion = np.amin(O_original_motion)
-    
-    JJO_RGB_pose = np.array(np.floor(255 * ((O_original_pose - c_min_pose) / (c_max_pose - c_min_pose))), dtype=np.uint8)
-    JJO_RGB_motion = np.array(np.floor(255 * ((O_original_motion - c_min_motion) / (c_max_motion - c_min_motion))), dtype=np.uint8)
-
-    PF = np.zeros((len(coords_frames), 120,  3), dtype=np.uint8)
-    MF = np.zeros((len(coords_frames)-1, 120, 3), dtype=np.uint8)
-
-    for nb_frame in range(len(coords_frames)):
-        temp_pf = np.concatenate([JJD_RGB_pose[nb_frame], JJO_RGB_pose[nb_frame]])
-        # temp_pf = JJD_RGB_pose[nb_frame]
-        PF[nb_frame] = temp_pf
-        if nb_frame < len(coords_frames)-1:
-            temp_mf = np.concatenate([JJD_RGB_motion[nb_frame], JJO_RGB_motion[nb_frame]])
-            # temp_mf = JJD_RGB_motion[nb_frame]
-            MF[nb_frame] = temp_mf
-
-    PF = np.array(PF)
-    MF = np.array(MF)
-    SPMF = np.zeros((120, 2*len(coords_frames)-1, 3), dtype=np.uint8)
+    SPMF = np.zeros((200, 2*len(coords_frames)-1, 3), dtype=np.uint8)
 
     frame_index = 0
     for pf, mf in zip(PF, MF):
@@ -1463,9 +1274,14 @@ def main(path, filename, config):
 
     if config["encoding"] == "GEOMETRIC":
         ignored_joints_index = ignoreJoints(bvhParser, 0, IGNORED_JOINTS)
+        # joints_we_want = np.array([4, 7, 12, 16, 20], dtype=np.uint8) # head, feet, hands
+        joints_we_want = np.array([0, 13, 16, 17, 20], dtype=np.uint8) # root, shoulders, hands
+        # joints_we_want = np.array([0, 14, 16, 18, 20], dtype=np.uint8) # root, arm, hands
+        image = bvh2GeometricFeaturesCustom(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index, joints_we_want)
         # image = bvh2geometric.bvh2GeometricFeaturesV2(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
-        # image = bvh2GeometricFeaturesRootAndHead(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
-        image = bvh2GeometricFeaturesRootAndShoulders(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
+    elif config["encoding"] == "MULTIPLE":
+        ignored_joints_index = ignoreJoints(bvhParser, 0, IGNORED_JOINTS)
+        image = bvh2geometric.convert_world_coordinates_2_image_nb_2(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
     elif config["encoding"] == "LARABA" or config["encoding"] == "LUDL":
         image = bvh2RGBImage(bvhParser, joints, IGNORED_JOINTS, config)
     elif config["encoding"]== "XYZ":
@@ -1530,13 +1346,7 @@ if __name__ == "__main__":
     # For all directories in the DATADIR directory, convert BVH files to images
     for dirpath, dirnames, files in os.walk(DATADIR):
         print("[+] - Exploring directory: " + dirpath)
-        # if args.test:
-        #     try:
-        #         samples = random.sample(files, 20)
-        #     except ValueError:
-        #         print(WARNING+"[!] - Directory contains less than 20 files"+RESET)
-        #         samples = files
-        # else:
+
         samples = files
 
         for file_name in samples:
