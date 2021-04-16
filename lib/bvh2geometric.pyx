@@ -716,10 +716,11 @@ cpdef list bvh2MultipleImages(np.ndarray[FLOAT_t, ndim=2] frames, list joints, l
         np.ndarray[FLOAT_t, ndim=2] current_frame
         np.ndarray[FLOAT_t, ndim=2] next_frame
         list energies_list = [0 for i in range(N)]
+        int step = 10
     
-    for f in range(0, F-20, 20):
+    for f in range(0, F-step, step):
         current_frame = world_coordinates[f]
-        next_frame = world_coordinates[f+20]
+        next_frame = world_coordinates[f+step]
         for n in range(N):
             energy = np.linalg.norm(next_frame[n] - current_frame[n])
             energies_list[n] += energy
