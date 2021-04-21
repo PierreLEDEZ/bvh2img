@@ -740,9 +740,9 @@ cpdef list bvh2MultipleImages(np.ndarray[FLOAT_t, ndim=2] frames, list joints, l
     for f in range(F):
         for n in range(N):
             coords_5D = np.concatenate((world_coordinates[f][n], np.array([f, n])))
-            for c in range(3):
-                current_2D = space_2D_v2[c]
-                current_3D = space_3D_v2[c]
+            for c in range(10):
+                current_2D = space_2D[c]
+                current_3D = space_3D[c]
                 j = coords_5D[current_2D[0]]
                 k = coords_5D[current_2D[1]]
                 r = coords_5D[current_3D[0]]
@@ -760,7 +760,7 @@ cpdef list bvh2MultipleImages(np.ndarray[FLOAT_t, ndim=2] frames, list joints, l
         np.ndarray X, Y, RGB
         list final_images = []
 
-    for img_index in range(3):
+    for img_index in range(10):
         X = np.array(images[img_index][1], dtype=FLOAT)
         Y = np.array(images[img_index][0], dtype=FLOAT)
         RGB = np.array(images[img_index][2])
