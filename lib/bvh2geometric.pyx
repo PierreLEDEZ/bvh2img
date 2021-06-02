@@ -3,6 +3,7 @@
 # cython: language_level=3
 
 import numpy as np, cv2, time
+import tensorflow
 cimport numpy as np
 cimport cython
 from cython.parallel import prange
@@ -707,7 +708,115 @@ cpdef np.ndarray[UINT_t, ndim=3] bvh2GeometricFeaturesCustom(np.ndarray[FLOAT_t,
 cpdef list bvh2MultipleImages(np.ndarray[FLOAT_t, ndim=2] frames, list joints, list ignored_joints, list ignored_joints_index):
 
     cdef np.ndarray[FLOAT_t, ndim=3] world_coordinates = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
+
+    cdef:
+        int F = len(world_coordinates)
+        int N = len(world_coordinates[0])
+        int f, n
+        float energy
+        np.ndarray[FLOAT_t, ndim=2] current_frame
+        np.ndarray[FLOAT_t, ndim=2] next_frame
+        list energies_list = [0 for i in range(N)]
+        int step = 10
     
+    for f in range(0, F-step, step):
+        current_frame = world_coordinates[f]
+        next_frame = world_coordinates[f+step]
+        for n in range(N):
+            energy = np.linalg.norm(next_frame[n] - current_frame[n])
+            energies_list[n] += energy
+
+    cdef np.ndarray energies = np.array(energies_list)
+    energies = (energies - np.amin(energies))/(np.amax(energies) - np.amin(energies))
+    
+    cdef:
+        float rho = .8
+
+        np.ndarray weights = rho*energies + (1 - rho)
+
+        list images = [[[], [] ,[]] for i in range(10)]
+        float j, k, r, g, b
+        np.ndarray rgb
+    
+    for f in range(F):
+        for n in range(N):
+            coords_5D = np.concatenate((world_coordinates[f][n], np.array([f, n])))
+            for c in range(10):
+                current_2D = space_2D[c]
+                current_3D = space_3D[c]
+                j = coords_5D[current_2D[0]]
+                k = coords_5D[current_2D[1]]
+                r = coords_5D[current_3D[0]]
+                g = coords_5D[current_3D[1]]
+                b = coords_5D[current_3D[2]]
+                rgb = np.array([r, g, b])
+                rgb = (1 - weights[n])*np.array([255, 255, 255]) + weights[n]*rgb
+                images[c][0].append(j)
+                images[c][1].append(k)
+                images[c][2].append(rgb)
+    
+    cdef:
+        float beta = .8
+        int img_index
+        np.ndarray X, Y, RGB
+        list final_images = []
+
+    for img_index in range(10):
+        X = np.array(images[img_index][1], dtype=FLOAT)
+        Y = np.array(images[img_index][0], dtype=FLOAT)
+        RGB = np.array(images[img_index][2])
+        RGB = np.floor(255 * (RGB - np.amin(RGB))/(np.amax(RGB) - np.amin(RGB)))
+
+        x_min, x_max = np.amin(X), np.amax(X)
+        y_min, y_max = np.amin(Y), np.amax(Y)
+
+        temp_w = x_max - x_min
+        temp_h = y_max - y_min
+
+        if temp_w > temp_h:
+            mult = (temp_w // temp_h)
+            Y = Y * mult
+        else:
+            mult = (temp_h // temp_w)
+            X = X * mult
+        
+        X = np.array(np.floor(X*10), dtype=INT)
+        Y = np.array(np.floor(Y*10), dtype=INT)
+
+        x_min, x_max = np.amin(X)-10, np.amax(X)+10
+        y_min, y_max = np.amin(Y)-10, np.amax(Y)+10
+
+        width, height = x_max - x_min, y_max - y_min
+
+        img = np.zeros((height, width, 3), dtype=UINT)
+        img.fill(255)
+        for x, y, rgb in zip(X, Y, RGB):
+            if x_max <= width:
+                x += np.abs(x_min)
+            if x_max >= width:
+                x -= np.abs(x_min)
+            if y_max >= height:
+                y -= np.abs(y_min)
+            if y_max <= height:
+                y += np.abs(y_min)
+
+            cv2.circle(img, (x, height-y), int((1-beta)*10+beta*(width/100)), [int(rgb[2]), int(rgb[1]), int(rgb[0])], -1)
+
+        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
+        final_images.append(img)
+    return final_images
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef list oversample_bvh2MultipleImages(np.ndarray[FLOAT_t, ndim=2] frames, list joints, list ignored_joints, list ignored_joints_index):
+
+    cdef np.ndarray[FLOAT_t, ndim=3] old_world_coordinates = getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index)
+    sequence_length = np.array(old_world_coordinates).shape[0]
+    cropped_length = int(0.15*float(sequence_length))
+    print(cropped_length)
+    CROP_SIZE = [sequence_length-cropped_length, 21, 3]
+    cdef np.ndarray[FLOAT_t, ndim=3] world_coordinates = np.float32(tensorflow.image.random_crop(np.array(old_world_coordinates), CROP_SIZE))
+
     cdef:
         int F = len(world_coordinates)
         int N = len(world_coordinates[0])
