@@ -1059,10 +1059,10 @@ def saveImage(img,path, filename, encoding_method, coordinate, informations, enh
         img = cv2.merge([H,S,V])
         img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
         print("[+] - Saving image in '" + path + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + "_ENHANCED.png'")
-        cv2.imwrite("../img/"+path.split("/")[-1] + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + "_ENHANCED.png", img)
+        cv2.imwrite("./img/"+path.split("/")[-1] + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + "_ENHANCED.png", img)
     else:
         print("[+] - Saving image in '" + path + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + ".png'")
-        cv2.imwrite("../img/"+path.split("/")[-1] + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + ".png", img)
+        cv2.imwrite("./img/"+path.split("/")[-1] + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + ".png", img)
 
 def saveImages(images, path, filename, informations):
     """ 
@@ -1079,7 +1079,7 @@ def saveImages(images, path, filename, informations):
     """
     for img_index in range(len(images)):
         print("[+] - Saving image in '" + path + "/" + filename[:-4] + "/" + filename[:-4] + "_" + informations.upper() + "_" + str(img_index) + ".png'")
-        cv2.imwrite("../img/"+path.split("/")[-1] + "/" + filename[:-4] + "/" + filename[:-4] + "_" + informations.upper() + "_" + str(img_index) + ".png", images[img_index])
+        cv2.imwrite("./img/"+path.split("/")[-1] + "/" + filename[:-4] + "/" + filename[:-4] + "_" + informations.upper() + "_" + str(img_index) + ".png", images[img_index])
 
 def applyInterpolation(base_img, dim, path, filename, encoding_method, interpolation_method, coordinate, informations, enhancement=False):
     """ 
@@ -1219,13 +1219,13 @@ def main(path, filename, config):
         image = xyz2RGBImage(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
     
     # Check if directory exists, if not create it
-    path_to_img = Path("../img/"+path.split("/")[-1])
+    path_to_img = Path("./img/"+path.split("/")[-1])
     path_to_img.mkdir(exist_ok=True)
 
     if multiple_images:
         # In this case, create also a directory corresponding to the filename inside the class folder.
         # This directory will contain several images
-        path_to_img_dir = Path("../img/"+path.split("/")[-1]+"/"+filename[:-4])
+        path_to_img_dir = Path("./img/"+path.split("/")[-1]+"/"+filename[:-4])
         path_to_img_dir.mkdir(exist_ok=True)
 
         saveImages(images, path, filename, config["details"])
