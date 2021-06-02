@@ -194,6 +194,9 @@ def getWorldCoordinates(frames, joints, ignored_joints, ignored_joints_index):
             joint_placed += 6
             pixel_placed += 1
 
+    with open("class_example.npy", "wb") as f:
+        np.save(f, coords_frames)
+
     return coords_frames
 
 def bvh2LiuImg(frames, joints, ignored_joints, ignored_joints_index):
@@ -962,6 +965,7 @@ def bvh2RGBImage(bvhParser, joints, ignored_joints, config):
 
     img_content = np.zeros(img_struct, dtype=np.uint8)
 
+
     if config["coordinate"] == TRANSLATION:
         translation_min_max_X, translation_min_max_Y, translation_min_max_Z = get_min_max_translation(bvhParser.frames)
     elif config["coordinate"] == ROTATION:
@@ -1028,7 +1032,7 @@ def saveImage(img,path, filename, encoding_method, coordinate, informations, enh
         :param coordinate: coordinates used for the resulting image
         :type coordinate: int
         :param informations: Additional informations given at launch to appears in images name
-        :type coordinate: string
+        :type informations: string
         :param enhancement: if true, apply CLAHE (Constrast Limiting Adaptive Histogram Equalization) to adjust contrast and colors
         :type enhancement: bool
     """
@@ -1059,6 +1063,23 @@ def saveImage(img,path, filename, encoding_method, coordinate, informations, enh
     else:
         print("[+] - Saving image in '" + path + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + ".png'")
         cv2.imwrite("../img/"+path.split("/")[-1] + "/" + filename[:-4] + "_" + encoding_method.upper() + "_" + coord + "_" + informations.upper() + ".png", img)
+
+def saveImages(images, path, filename, informations):
+    """ 
+        Save the given images in multiple files 
+
+        :param images: images we want to save
+        :type img: list of numpy arrays
+        :param path: path to write the new file
+        :type path: string
+        :param filename: name of the BVH file
+        :type filename: string
+        :param informations: Additional informations given at launch to appears in images name
+        :type informations: string
+    """
+    for img_index in range(len(images)):
+        print("[+] - Saving image in '" + path + "/" + filename[:-4] + "/" + filename[:-4] + "_" + informations.upper() + "_" + str(img_index) + ".png'")
+        cv2.imwrite("../img/"+path.split("/")[-1] + "/" + filename[:-4] + "/" + filename[:-4] + "_" + informations.upper() + "_" + str(img_index) + ".png", images[img_index])
 
 def applyInterpolation(base_img, dim, path, filename, encoding_method, interpolation_method, coordinate, informations, enhancement=False):
     """ 
@@ -1138,114 +1159,6 @@ def parseFile(path, filename):
     bvhParser.parse(path+"/"+filename)
     return bvhParser
 
-def bvh2img(path, filename, original=False, bicubic=False, nearest=False, ludl=False, laraba=False, coordinate=ROTATION, enhancement=False, additional_informations=""):
-    if not original and not bicubic and not nearest:
-        print(ALERT+"[!] - No images will be saved"+RESET)
-
-    print(INFO+"[+] - Processing file '" + filename + "' in '" + path + "'."+RESET)
-    bvhParser = bvh_parser.BVHParser()
-    bvhParser.parse(path+"/"+filename)
-    
-    ignored_joints = IGNORED_JOINTS
-    ignored_joints_index = ignore_joints(bvhParser, coordinate, ignored_joints)
-
-    joints = [bvhParser.joints[value] for _, value in enumerate(bvhParser.joints) if not value.endswith("_end")]
-
-    if coordinate == BOTH:
-        height_multiplier = 2
-    else:
-        height_multiplier = 1
-
-    width, height = bvhParser.nb_frames, len(joints) * height_multiplier
-    img_struct = (height, width, 3)
-
-    if ludl:
-        img_content_ludl = np.zeros(img_struct, dtype=np.uint8)
-    
-    if laraba:
-        img_content_laraba = np.zeros(img_struct, dtype=np.uint8)   
-
-    if len(bvhParser.frames[0]) != 6*len(joints):
-        print(WARNING+"[!] - Format not correct"+RESET)
-        print(len(bvhParser.frames[0]))
-
-    if coordinate == TRANSLATION:
-        translation_min_max_X, translation_min_max_Y, translation_min_max_Z = get_min_max_translation(bvhParser.frames)
-    elif coordinate == ROTATION:
-        rotation_min_max_X, rotation_min_max_Y, rotation_min_max_Z = get_min_max_rotation(bvhParser.frames)
-    else:
-        translation_min_max_X, translation_min_max_Y, translation_min_max_Z = get_min_max_translation(bvhParser.frames)
-        rotation_min_max_X, rotation_min_max_Y, rotation_min_max_Z = get_min_max_rotation(bvhParser.frames)
-    
-    for nb_frame, frame in enumerate(bvhParser.frames):
-        if coordinate == ROTATION:
-            joint_placed = 3
-        else:
-            joint_placed = 0
-        for nb_joint in range(0, height):
-            if nb_joint in ignored_joints_index:
-                joint_placed += 3
-                continue
-            try:
-                if ludl:
-                    img_content_ludl[nb_joint][nb_frame] = calculate_ludl_value(frame, joint_placed)
-
-                if laraba:
-                    if coordinate == ROTATION:
-                        img_content_laraba[nb_joint][nb_frame] = calculate_laraba_value_rotation(frame, joint_placed, rotation_min_max_X, rotation_min_max_Y, rotation_min_max_Z)
-                    if coordinate == TRANSLATION:
-                        img_content_laraba[nb_joint][nb_frame] = calculate_laraba_value_translation(frame, joint_placed, translation_min_max_X, translation_min_max_Y, translation_min_max_Z)
-                    if coordinate == HYBRID:
-                        if nb_joint == 0:
-                            img_content_laraba[nb_joint][nb_frame] = calculate_laraba_value_translation(frame, joint_placed, translation_min_max_X, translation_min_max_Y, translation_min_max_Z)
-                        else:
-                            img_content_laraba[nb_joint][nb_frame]= calculate_laraba_value_rotation(frame, joint_placed, rotation_min_max_X, rotation_min_max_Y, rotation_min_max_Z)
-                    if coordinate == BOTH:
-                        if nb_joint % 2 == 0:
-                            img_content_laraba[nb_joint][nb_frame] = calculate_laraba_value_translation(frame, joint_placed, translation_min_max_X, translation_min_max_Y, translation_min_max_Z)
-                        else:
-                            img_content_laraba[nb_joint][nb_frame] = calculate_laraba_value_rotation(frame, joint_placed, rotation_min_max_X, rotation_min_max_Y, rotation_min_max_Z)
-            except:
-                pass
-
-            if (coordinate == BOTH) or (coordinate == HYBRID and nb_joint == 0):
-                joint_placed += 3
-            else:
-                joint_placed += 6
-
-    #Delete black rows
-    if laraba:
-        img_content_laraba = np.delete(img_content_laraba, ignored_joints_index, axis=0)
-    if ludl:
-        img_content_ludl = np.delete(img_content_ludl, ignored_joints_index, axis=0)
-
-    path_to_img = Path("../img/"+path.split("/")[-1])
-    path_to_img.mkdir(exist_ok=True)
-
-    resize_dim = (236,118)
-
-    if laraba:
-        R,G,B = cv2.split(img_content_laraba)
-        img_laraba = cv2.merge([B,G,R])
-        
-        if original:
-            save_img(img_laraba, path, filename, "laraba", coordinate, additional_informations, enhancement)
-        if bicubic:
-            save_img_interpolation(img_laraba, resize_dim, path, filename, "laraba", "BICUBIC", coordinate, additional_informations, enhancement)
-        if nearest:
-            save_img_interpolation(img_laraba, resize_dim, path, filename, "laraba", "NEAREST", coordinate, additional_informations, enhancement)
-
-    if ludl:
-        R,G,B = cv2.split(img_content_ludl)
-        img_ludl = cv2.merge([B,G,R])
-
-        if original:
-            save_img(img_ludl, path, filename, "ludl", coordinate, additional_informations, enhancement)
-        if bicubic:
-            save_img_interpolation(img_ludl, resize_dim, path, filename, "ludl", "BICUBIC", coordinate, additional_informations, enhancement)
-        if nearest:
-            save_img_interpolation(img_ludl, resize_dim, path, filename, "ludl", "NEAREST", coordinate, additional_informations, enhancement)
-
 def checkFormat(frames, joints):
     """
         Check if BVH file is correctly formed
@@ -1266,6 +1179,8 @@ def main(path, filename, config):
         5) Save the image in the file
     """
 
+    multiple_images = False
+
     bvhParser = parseFile(path, filename)
 
     joints = bvhParser.get_joints_list()
@@ -1274,28 +1189,52 @@ def main(path, filename, config):
 
     if config["encoding"] == "GEOMETRIC":
         ignored_joints_index = ignoreJoints(bvhParser, 0, IGNORED_JOINTS)
+
+        # --- Use version 1 of geometric features (Pham) ---
+        image = bvh2geometric.bvh2GeometricFeatures(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
+
+        # --- Use version 2 of geometric features (Root only) ---
+        # image = bvh2GeometricFeaturesCustom(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index, joints_we_want)
+        
+        # --- Use version 3 of geometric features (Multiple joint for computation => joints_we_want array) ---
+        
+        # Define here the joint index you want to use
         # joints_we_want = np.array([4, 7, 12, 16, 20], dtype=np.uint8) # head, feet, hands
         joints_we_want = np.array([0, 13, 16, 17, 20], dtype=np.uint8) # root, shoulders, hands
         # joints_we_want = np.array([0, 14, 16, 18, 20], dtype=np.uint8) # root, arm, hands
-        image = bvh2GeometricFeaturesCustom(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index, joints_we_want)
+        
         # image = bvh2geometric.bvh2GeometricFeaturesV2(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
     elif config["encoding"] == "MULTIPLE":
+        # Set this flag to True to call a separate saving method
+        multiple_images = True
+
         ignored_joints_index = ignoreJoints(bvhParser, 0, IGNORED_JOINTS)
-        image = bvh2geometric.convert_world_coordinates_2_image_nb_2(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
+        
+        images = bvh2geometric.bvh2MultipleImages(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
     elif config["encoding"] == "LARABA" or config["encoding"] == "LUDL":
         image = bvh2RGBImage(bvhParser, joints, IGNORED_JOINTS, config)
     elif config["encoding"]== "XYZ":
         ignored_joints_index = ignoreJoints(bvhParser, 0, IGNORED_JOINTS)
+        
         image = xyz2RGBImage(bvhParser.frames, joints, IGNORED_JOINTS, ignored_joints_index)
-
+    
     # Check if directory exists, if not create it
     path_to_img = Path("../img/"+path.split("/")[-1])
     path_to_img.mkdir(exist_ok=True)
 
-    if config["interpolation"] == True:
-        applyInterpolation(image, config["resize_dim"], path, filename, config["encoding"], config["interpolation_method"], config["coordinate"], config["details"], config["enhancement"])
+    if multiple_images:
+        # In this case, create also a directory corresponding to the filename inside the class folder.
+        # This directory will contain several images
+        path_to_img_dir = Path("../img/"+path.split("/")[-1]+"/"+filename[:-4])
+        path_to_img_dir.mkdir(exist_ok=True)
+
+        saveImages(images, path, filename, config["details"])
+
     else:
-        saveImage(image, path, filename, config["encoding"], config["coordinate"], config["details"], config["enhancement"])
+        if config["interpolation"] == True:
+            applyInterpolation(image, config["resize_dim"], path, filename, config["encoding"], config["interpolation_method"], config["coordinate"], config["details"], config["enhancement"])
+        else:
+            saveImage(image, path, filename, config["encoding"], config["coordinate"], config["details"], config["enhancement"])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -1341,7 +1280,7 @@ if __name__ == "__main__":
     config = parseConfigFile(args)
 
     if args.test:
-        DATADIR = "../data/Others"
+        DATADIR = "./data/Others"
 
     # For all directories in the DATADIR directory, convert BVH files to images
     for dirpath, dirnames, files in os.walk(DATADIR):
